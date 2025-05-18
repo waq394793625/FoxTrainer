@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+function 打卡() {
+  const [logs, setLogs] = useState([]);
 // 根据打卡类型返回对应颜色
 const getTypeColor = (type) => {
   switch (type) {
@@ -27,9 +29,6 @@ const getTypeColor = (type) => {
       return '#ccc';
   }
 };
-
-export default function HealthTracker() {
-  const [logs, setLogs] = useState([]);
 
   // 记录打卡
   const handleLog = async (type) => {
@@ -175,3 +174,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
+
+export default 打卡;
