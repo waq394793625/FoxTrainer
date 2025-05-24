@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform, PermissionsA
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 import * as DocumentPicker from 'expo-document-picker';
+import * as Updates from 'expo-updates';
 const StorageAccessFramework = FileSystem.StorageAccessFramework;
 
 
@@ -37,17 +38,23 @@ export default function 个人中心() {
   // 导出数据到 Download
   async function handleExport() {
     try {
-      const [logs, spark, sparkTypes] = await Promise.all([
+      const [logs, spark, sparkTypes, starBalance, rewardInventory, starRecords] = await Promise.all([
         AsyncStorage.getItem('health_logs'),
         AsyncStorage.getItem('sparkRecords'),
         AsyncStorage.getItem('sparkTypes'),
+        AsyncStorage.getItem('starBalance'),
+        AsyncStorage.getItem('rewardInventory'),
+        AsyncStorage.getItem('starRecords'),
       ]);
       const backupData = {
         health_logs: logs ? JSON.parse(logs) : [],
         sparkRecords: spark ? JSON.parse(spark) : [],
         sparkTypes: sparkTypes ? JSON.parse(sparkTypes) : [],
+        starBalance: starBalance ? Number(starBalance) : 0,
+        rewardInventory: rewardInventory ? JSON.parse(rewardInventory) : {},
+        starRecords: starRecords ? JSON.parse(starRecords) : [],
       };
-  
+        
       // 选择目录（推荐直接让用户选Download或者你自己新建的“小狐狸打卡”文件夹）
       const dirResult = await StorageAccessFramework.requestDirectoryPermissionsAsync();
       if (!dirResult.granted) {
@@ -90,12 +97,21 @@ export default function 个人中心() {
         const jsonStr = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.UTF8 });
         Alert.alert('读取内容', jsonStr.slice(0, 100)); // 只显示前100字符
         const data = JSON.parse(jsonStr);
-        if (data.sparkRecords && data.sparkTypes && data.health_logs) {
-          await AsyncStorage.setItem('sparkRecords', JSON.stringify(data.sparkRecords));
-          await AsyncStorage.setItem('sparkTypes', JSON.stringify(data.sparkTypes));
-          await AsyncStorage.setItem('health_logs', JSON.stringify(data.health_logs));
-          Alert.alert('导入成功', '数据已恢复');
-        } else {
+      if (data.sparkRecords && data.sparkTypes && data.health_logs) {
+        await AsyncStorage.setItem('sparkRecords', JSON.stringify(data.sparkRecords));
+        await AsyncStorage.setItem('sparkTypes', JSON.stringify(data.sparkTypes));
+        await AsyncStorage.setItem('health_logs', JSON.stringify(data.health_logs));
+        // 新增奖励相关
+        if ('starBalance' in data)
+          await AsyncStorage.setItem('starBalance', String(data.starBalance));
+        if ('rewardInventory' in data)
+          await AsyncStorage.setItem('rewardInventory', JSON.stringify(data.rewardInventory));
+        if ('starRecords' in data)
+          await AsyncStorage.setItem('starRecords', JSON.stringify(data.starRecords));
+        Alert.alert('导入成功', '数据已恢复', [
+          { text: '好的', onPress: () => Updates.reloadAsync() }
+        ]);
+      } else {
           Alert.alert('导入失败', '文件格式不正确');
         }
       } else {
@@ -104,6 +120,7 @@ export default function 个人中心() {
     } catch (e) {
       Alert.alert('导入失败', e.message);
     }
+
   }
   
   
