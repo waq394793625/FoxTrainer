@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Modal, Picker } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Modal } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 const defaultTypes = ['主目标', '微探索', '充能', '灵感'];
-
 
 export default function 星火() {
   const [records, setRecords] = useState([]);
@@ -17,7 +18,28 @@ export default function 星火() {
   const [newTypeInput, setNewTypeInput] = useState('');
   const [dateObj, setDateObj] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  // 获取所有类型（默认+自定义）
+
+  // 1. 加载本地数据
+  useEffect(() => {
+    AsyncStorage.getItem('sparkRecords').then(data => {
+      if (data) setRecords(JSON.parse(data));
+    });
+    AsyncStorage.getItem('sparkTypes').then(data => {
+      if (data) setCustomTypes(JSON.parse(data));
+    });
+  }, []);
+
+  // 2. 每次 records 变化自动保存
+  useEffect(() => {
+    AsyncStorage.setItem('sparkRecords', JSON.stringify(records));
+  }, [records]);
+
+  // 3. 每次自定义类型变化自动保存
+  useEffect(() => {
+    AsyncStorage.setItem('sparkTypes', JSON.stringify(customTypes));
+  }, [customTypes]);
+
+  // 所有类型（默认+自定义）
   const allTypes = [...defaultTypes, ...customTypes];
 
   // 按日期降序排列
@@ -84,24 +106,22 @@ export default function 星火() {
     }
   }
 
-	function formatDateWithWeek(date) {
-	  const days = ['日', '一', '二', '三', '四', '五', '六'];
-	  const d = new Date(date);
-	  const ymd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-	  return `${ymd} (周${days[d.getDay()]})`;
-	}
+  function formatDateWithWeek(date) {
+    const days = ['日', '一', '二', '三', '四', '五', '六'];
+    const d = new Date(date);
+    const ymd = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return `${ymd} (周${days[d.getDay()]})`;
+  }
 
-	function showDateHelper(date) {
-	  const now = new Date();
-	  // 只保留年月日比较
-	  const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-	  const week = ['日', '一', '二', '三', '四', '五', '六'][date.getDay()];
-	  if (ymd(date) === ymd(now)) {
-		return `${ymd(date)}（今天）`;
-	  }
-	  return `${ymd(date)}（周${week}）`;
-	}
-
+  function showDateHelper(date) {
+    const now = new Date();
+    const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const week = ['日', '一', '二', '三', '四', '五', '六'][date.getDay()];
+    if (ymd(date) === ymd(now)) {
+      return `${ymd(date)}（今天）`;
+    }
+    return `${ymd(date)}（周${week}）`;
+  }
 
   return (
     <View style={styles.container}>
@@ -144,58 +164,58 @@ export default function 星火() {
         <View style={styles.modalMask}>
           <View style={styles.modal}>
             <Text style={styles.modalTitle}>{editingIndex !== null ? '编辑记录' : '新增记录'}</Text>
-			<View style={{
-			  flexDirection: 'row',
-			  alignItems: 'center',
-			  borderWidth: 1,
-			  borderColor: '#eee',
-			  borderRadius: 8,
-			  backgroundColor: '#fff',
-			  paddingHorizontal: 8,
-			  marginBottom: 12,
-			  height: 44
-			}}>			
-			<TouchableOpacity
-			  style={{ flex: 1, justifyContent: 'center' }}
-			  onPress={() => setShowDatePicker(true)}
-			>
-			<Text style={{ color: newDate ? '#333' : '#aaa', fontSize: 16 }}>
-				{newDate ? formatDateWithWeek(newDate) : "选择日期"}
-			  </Text>
-			</TouchableOpacity>
-			  <TouchableOpacity
-				style={{
-				  marginLeft: 10,
-				  backgroundColor: '#e8eee3',
-				  borderRadius: 8,
-				  paddingHorizontal: 8,
-				  paddingVertical: 4,
-				}}
-				onPress={() => {
-				  const today = new Date();
-				  setDateObj(today);
-				  setNewDate(formatDateWithWeek(today).slice(0, 10));
-				}}
-			  >
-				<Text style={{ color: '#2f81a4', fontSize: 14 }}>回到今天</Text>
-			  </TouchableOpacity>
-				</View>
-			{showDatePicker && (
-			  <DateTimePicker
-				value={dateObj}
-				mode="date"
-				display="spinner"
-				onChange={(event, selectedDate) => {
-				  if (selectedDate) {
-					setDateObj(selectedDate);
-					setNewDate(formatDateWithWeek(selectedDate).slice(0, 10));
-				  }
-				  setShowDatePicker(false);
-				}}
-				minimumDate={new Date(2023, 0, 1)}
-				maximumDate={new Date(2099, 11, 31)}
-			  />
-			)}
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: '#eee',
+              borderRadius: 8,
+              backgroundColor: '#fff',
+              paddingHorizontal: 8,
+              marginBottom: 12,
+              height: 44
+            }}>
+              <TouchableOpacity
+                style={{ flex: 1, justifyContent: 'center' }}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={{ color: newDate ? '#333' : '#aaa', fontSize: 16 }}>
+                  {newDate ? formatDateWithWeek(newDate) : "选择日期"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  marginLeft: 10,
+                  backgroundColor: '#e8eee3',
+                  borderRadius: 8,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                }}
+                onPress={() => {
+                  const today = new Date();
+                  setDateObj(today);
+                  setNewDate(formatDateWithWeek(today).slice(0, 10));
+                }}
+              >
+                <Text style={{ color: '#2f81a4', fontSize: 14 }}>回到今天</Text>
+              </TouchableOpacity>
+            </View>
+            {showDatePicker && (
+              <DateTimePicker
+                value={dateObj}
+                mode="date"
+                display="spinner"
+                onChange={(event, selectedDate) => {
+                  if (selectedDate) {
+                    setDateObj(selectedDate);
+                    setNewDate(formatDateWithWeek(selectedDate).slice(0, 10));
+                  }
+                  setShowDatePicker(false);
+                }}
+                minimumDate={new Date(2023, 0, 1)}
+                maximumDate={new Date(2099, 11, 31)}
+              />
+            )}
             <View style={styles.typeRow}>
               <Text style={{ fontWeight: 'bold' }}>类型：</Text>
               <TouchableOpacity
@@ -203,37 +223,38 @@ export default function 星火() {
                 onPress={() => setShowTypeInput(true)}>
                 <Text>{newType}</Text>
               </TouchableOpacity>
-				{showTypeInput && (
-				  <TouchableOpacity
-					style={styles.fullScreenMask}
-					activeOpacity={1}
-					onPress={() => setShowTypeInput(false)}
-				  >
-					<View style={styles.typeModal}>
-					  {allTypes.map(type => (
-						<TouchableOpacity key={type} onPress={() => { setNewType(type); setShowTypeInput(false); }}>
-						  <Text style={styles.typeOption}>{type}</Text>
-						</TouchableOpacity>
-					  ))}
-					  <TextInput
-						style={styles.typeInput}
-						placeholder="自定义类型"
-						value={newTypeInput}
-						onChangeText={setNewTypeInput}
-					  />
-					  <TouchableOpacity onPress={handleAddCustomType}>
-						<Text style={styles.typeAddBtn}>添加</Text>
-					  </TouchableOpacity>
-					</View>
-				  </TouchableOpacity>
-				)}
+              {showTypeInput && (
+                <TouchableOpacity
+                  style={styles.fullScreenMask}
+                  activeOpacity={1}
+                  onPress={() => setShowTypeInput(false)}
+                >
+                  <View style={styles.typeModal}>
+                    {allTypes.map(type => (
+                      <TouchableOpacity key={type} onPress={() => { setNewType(type); setShowTypeInput(false); }}>
+                        <Text style={styles.typeOption}>{type}</Text>
+                      </TouchableOpacity>
+                    ))}
+                    <TextInput
+                      style={styles.typeInput}
+                      placeholder="自定义类型"
+                      value={newTypeInput}
+                      onChangeText={setNewTypeInput}
+                    />
+                    <TouchableOpacity onPress={handleAddCustomType}>
+                      <Text style={styles.typeAddBtn}>添加</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              )}
             </View>
             <TextInput
-              style={styles.input}
+              style={[styles.input, {minHeight: 60, maxHeight: 120, textAlignVertical: 'top'}]}
               placeholder="内容"
               value={newContent}
               onChangeText={setNewContent}
-            />
+              multiline
+              />
             <View style={styles.modalBtnRow}>
               <TouchableOpacity style={styles.saveBtn} onPress={handleAddOrEdit}>
                 <Text style={{ color: '#fff' }}>完成</Text>
